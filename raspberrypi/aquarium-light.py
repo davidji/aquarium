@@ -2,7 +2,6 @@
 
 import sys
 import os
-import RPi.GPIO as GPIO
 from time import sleep
 from datetime import date, datetime, time, timedelta
 import math
@@ -13,18 +12,15 @@ LIGHT_PIN=17
 MIDDAY=time(hour=13)
 MOONLIGHT=0.02
 RADIANS_PER_SECOND=math.pi/timedelta(hours=12).total_seconds()
-
-GPIO.setmode(GPIO.BCM)
-GPIO.setup(LIGHT_PIN, GPIO.OUT)
-light=GPIO.PWM(LIGHT_PIN, 100)
-# start with light off (it's an inhibit pin)
-light.start(100)
-light_current = 0.0
+PI_BLASTER='/dev/pi-blaster'
+light_current=0.0
 
 def set_light(fraction):
     global light_current
-    if abs(light_current - fraction) > 0.001:
-        light.ChangeDutyCycle(100*(1.0-fraction))
+    if abs(light_current - fraction) >= 0.001:
+        ctrl = open(PI_BLASTER, 'w')
+        ctrl.write('{}={}\n'.format(LIGHT_PIN, 1.0-fraction))
+        ctrl.close()
         light_current = fraction
 
 def daylight_from_delta(delta):
@@ -43,13 +39,10 @@ def strobe():
 	sleep(0.01)
 
 def main(args):
-    try:
-        while True:
-            set_daylight()
-            sleep(10)
-    finally:
-        light.stop()
-        GPIO.cleanup()
+    set_light(0.0)
+    while True:
+        set_daylight()
+        sleep(10)
 
 
 if __name__ == "__main__":
